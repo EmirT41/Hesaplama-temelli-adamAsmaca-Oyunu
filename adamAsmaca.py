@@ -19,7 +19,7 @@ class CountError(Exception):
 
 class Hangman:
     def __init__(self):
-        self.createFileİfNotExist()
+        self.__checkFile()
 
         self.__categories = {
             "hayvanlar": ("köpek", "kedi", "at", "kuş", "fil","aslan","kaplan","balık","tilki","zürafa","kelebek","karga","leylek","kartal"),
@@ -170,7 +170,7 @@ class Hangman:
             print(COLOR_ERROR + word, end=" ")
             print("değil!")
 
-    #doğru tahmin sonrası rastgele bir harfi kelimede aç
+    # doğru tahmin sonrası rastgele bir harfi kelimede aç
     def openRandomLetter(self) -> str:
         closedIndexes = [i for i, char in enumerate(self.__displayWord) if char == "_"]
 
@@ -194,85 +194,88 @@ class Hangman:
             if "_" not in self.__displayWord:
                 break
 
+    # ---------- Hesap Makinesi ---------- #
+    # Hesap makinesi için sayı alma fonksiyonu
+    def __getNumbers(self, text:str="Sayıyı giriniz: ") -> float:
+        while(True):
+            try:
+                number = float(input(text))
+                return number
+            except ValueError:
+                print(COLOR_WARNING + "Lütfen geçerli bir değer giriniz!\n")
+
+    # İşlemleri kontrol eden fonksiyon
+    def __checkTheOperation(self, correctAnswer:float, answer:float) -> None:
+        if(abs((correctAnswer) - answer) <= 1e-6):
+            randomLetter = self.openRandomLetter()
+            self.__bonus += 1
+            self.__score += 15
+            print(COLOR_SUCCESS + "Doğru! 🎉")
+            print(f"🎁 Bonus: '{randomLetter}' harfi açıldı!")
+            print(f"Bonus puanın: {self.__bonus}")
+        else:
+            self.__score -= 10
+            print(COLOR_ERROR + "Yanlış! ⛔")
+            print(f"Doğru cevap = {correctAnswer}")
+            self.__errorCount -= 1
+
+    # İşlemleri yapan metot
+    def __calculate(self, arithmeticOperator:str) -> tuple[float, float] | None:
+        text = ". sayı (iptal için 'iptal'): "
+        number1, number2 = self.__getNumbers(f"1{text}"), self.__getNumbers(f"2{text}")
+
+        match (arithmeticOperator):
+            case "+": correctAnswer = number1 + number2
+            case "-": correctAnswer = number1 - number2
+            case "*": correctAnswer = number1 * number2
+            case "/":
+                if(number2 == 0):
+                    self.__errorCount -= 1
+                    self.__score -= 10
+                    print(COLOR_ERROR + "Payda '0' olamaz!\n")
+                    return
+                else: correctAnswer = number1 / number2
+
+        print(f"{number1} - {number2} = ?")
+        answer = self.__getNumbers("Cevabınız: ")
+        return correctAnswer, answer
+
     # Hesap makinesi metodu
     def calculator(self) -> None:
-        text = ". sayı (iptal için 'iptal'): "
-
-        # Hesap makinesi için sayı alma fonksiyonu
-        def getNumbers(text:str) -> float:
-            while(True):
-                try:
-                    number = float(input(text))
-                    return number
-                except ValueError:
-                    print(COLOR_WARNING + "Lütfen geçerli bir değer giriniz!\n")
-
+        
         # Matematiksel işlemi kontrol edip doğruluk değerine göre bazı işlemler yapar.
-        def checkTheOperation(correctAnswer:float, answer:float) -> None:
-            if(abs((correctAnswer) - answer) <= 1e-6):
-                randomLetter = self.openRandomLetter()
-                self.__bonus += 1
-                self.__score += 15
-                print(COLOR_SUCCESS + "Doğru! 🎉")
-                print(f"🎁 Bonus: '{randomLetter}' harfi açıldı!")
-                print(f"Bonus puanın: {self.__bonus}")
-            else:
-                self.__score -= 10
-                print(COLOR_ERROR + "Yanlış! ⛔")
-                print(f"Doğru cevap = {correctAnswer}")
-                self.__errorCount -= 1        
-
         while(True):
                 operation = input("İşlem türü (toplama/çıkarma/çarpma/bölme) ya da 'iptal': ").strip().lower()
                 match(operation):
                     case "toplama":
-                        number1, number2 = getNumbers(f"1{text}"), getNumbers(f"2{text}")
-                        print(f"{number1} + {number2} = ?")
-                        correctAnswer = number1 + number2
-                        answer = getNumbers("Cevabınız: ")
-
-                        checkTheOperation(correctAnswer, answer)
+                        correctAnswer, answer = self.__calculate("+")
+                        self.__checkTheOperation(correctAnswer, answer)
                         return
-
+                    
                     case "çıkarma":
-                        number1, number2 = getNumbers(f"1{text}"), getNumbers(f"2{text}")
-                        print(f"{number1} - {number2} = ?")
-                        correctAnswer = number1 - number2
-                        answer = getNumbers("Cevabınız: ")
-
-                        checkTheOperation(correctAnswer, answer)
+                        correctAnswer, answer = self.__calculate("-")
+                        self.__checkTheOperation(correctAnswer, answer)
                         return
-
+                    
                     case "çarpma":
-                        number1, number2 = getNumbers(f"1{text}"), getNumbers(f"2{text}")
-                        print(f"{number1} * {number2} = ?")
-                        correctAnswer = number1 * number2
-                        answer = getNumbers("Cevabınız: ")
-
-                        checkTheOperation(correctAnswer, answer)
+                        correctAnswer, answer = self.__calculate("*")
+                        self.__checkTheOperation(correctAnswer, answer)
                         return
-
+                    
                     case "bölme":
-                        number1, number2 = getNumbers(f"1{text}"), getNumbers(f"2{text}")
-                        if(number2 == 0):
-                            self.__errorCount -= 1
-                            self.__score -= 10
-                            print(COLOR_ERROR + "Payda '0' olamaz!\n")
-                            return
-                        else:
-                            print(f"{number1} / {number2} = ?")
-                            answer = getNumbers("Cevabınız: ")
-                            correctAnswer = number1 / number2
-                                
-                            checkTheOperation(correctAnswer, answer)
-                            return
+                        correctAnswer, answer = self.__calculate("/")
+                        self.__checkTheOperation(correctAnswer, answer)
+                        return
 
                     case "iptal":
                         return
                     # "case _:" c++ switch-case yapısında ki default gibidir
                     case _:
-                        print("Lütfen geçerli bir seçim yapınız!\n")
-
+                        os.system("cls")
+                        print(COLOR_WARNING + "Lütfen geçerli bir seçim yapınız!\n")
+                        time.sleep(1)
+                        os.system("cls")
+    # ----------------------------------------------------------------------- #
     
     def isWinOrLose(self) -> bool:
         if(self.__errorCount == 0):
@@ -293,57 +296,66 @@ class Hangman:
 
     #  ----------  Dosya İşlemleri  ----------  #
     # Bir oyun bitince skorları dosyaya yazdıracak.
-    def createFileİfNotExist(self) -> None:
+    def __checkFile(self) -> None:
         if(not os.path.exists("scores.json")):
             with open("scores.json", "w", encoding="utf-8") as file:
                 json.dump({}, file, ensure_ascii=False, indent=4)
+            return
+        
+        try:
+            with open("scores.json", "r", encoding="utf-8") as file:
+                scores = json.load(file)
+                # tip yanlış olursa
+                if not isinstance(scores, dict):
+                    scores = {}
+        except json.JSONDecodeError:
+            scores = {}
+        
+        for gamerName, score in list(scores.items()):
+            if not isinstance(score, (int, float)):
+                del scores[gamerName]
+
+        with open("scores.json", "w", encoding="utf-8") as file:
+                json.dump(scores, file, ensure_ascii=False, indent=4)
+            # Eğer score int veya float değilse siliyoruz
 
     # Skorları dosyaya yazacak
     def writeToFile(self) -> None:
-        with open("scores.json", "r", encoding="utf-8") as file:
-            try:
-                scores = json.load(file)
-            except json.JSONDecodeError:
-                scores = {}
+        with open("scores.json", "r", encoding="utf-8") as file:           
+            scores = json.load(file)
 
-            gamerScore = {self.__gamerName: self.__score}
-            if(self.__gamerName in scores):
-                if(self.__score > scores[self.__gamerName]):
-                    scores.update(gamerScore)
-                    sortedScores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
-                else:
-                    return
-            else:
-                scores.update(gamerScore)
-                sortedScores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
+        # oyuncu yoksa ekler, varsa ve yeni skor büyükse günceller.
+        scores[self.__gamerName] = max(self.__score, scores.get(self.__gamerName, 0))
 
+        sortedScores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
+        
         with open("scores.json", "w", encoding="utf-8") as file:
             json.dump(sortedScores, file, ensure_ascii=False, indent=4)
 
     # İlk 5 skoru dosyadan alıp ekrana yazdıracak.
     def writeScores(self) -> None:
         with open("scores.json", "r", encoding="utf-8") as file:
-            try:
-                scores = json.load(file)
-            except json.JSONDecodeError:
-                scores = {}
+            scores = json.load(file)           
 
-            if(not scores):
-                print(COLOR_WARNING + "Her hangi bir skor bulunmamaktadır.")
-                return
-            else:
-                rank = 1
-                print(COLOR_HEADER + "OYUNCULAR                SKORLAR")
-                for gamerName, score in scores.items():
-                    print(f"{rank}. {gamerName:<20} | {score:<5}")
-                    rank += 1
-                    if (rank == 6):
-                        break
+        if(not scores):
+            print(COLOR_WARNING + "Her hangi bir skor bulunmamaktadır.")
+            return
+        else:
+            sortedScores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
+            with open("scores.json", "w", encoding="utf-8") as file:
+                    json.dump(sortedScores, file, ensure_ascii=False, indent=4)
+            rank = 1
+            print(COLOR_HEADER + "OYUNCULAR                SKORLAR")
+            for gamerName, score in sortedScores.items():
+                print(f"{rank}. {gamerName:<20} | {score:<5}")
+                rank += 1   
+                if (rank == 6):
+                    break
     # ----------------------------------------------------------------------- #
 
     # ---------- Setter Method ---------- #
     def setGamerName(self, gamerName:str) -> None:
-        if(len(gamerName) < 20 and len(gamerName) > 2):
+        if(len(gamerName) <= 20 and len(gamerName) > 2):
             self.__gamerName = gamerName.strip()
         else:
             raise CountError(COLOR_WARNING + "İsim [3, 20] aralığında olmalıdır!")
@@ -388,9 +400,9 @@ class Hangman:
     # sifreli kelimeyi görüntüler
     def getDisplayWord(self) -> str:
         return " ".join(self.__displayWord)
-    # ----------------------------------------------------------------------- #
-
-def memberValidation(obj, member:str):
+    
+# Girilen değerlerin uzunluğu doğru mu veya tip hatası veriyor mu kontrol. obj sınıftan alınan bir metot
+def memberValidation(obj, member:str) -> bool:
     try:
         os.system("cls")
         obj(member)
@@ -419,12 +431,12 @@ def main():
     os.system("cls")
     print(COLOR_HEADER + "\n=== Calc & Hang: İşlem Yap, Harfi Kurtar! ===")
     while(isContinue):
-        print(Fore.GREEN+ Back.BLACK + Style.BRIGHT + "\n======== ANA MENÜ ========", Style.RESET_ALL + "\n")
+        print(Fore.GREEN+ Back.BLACK + Style.BRIGHT + "\n======== ANA MENÜ ========\n")
         print("Seçenekler: [Y]eni Tur | [O]yuncu İsmini Değiştir | [S]korları Yazdır | [Ç]ıkış")
-        choose = input("Seçiminiz: ").strip().upper()
+        choice = input("Seçiminiz: ").strip().upper()
         os.system("cls")
 
-        match choose:
+        match choice:
             case "Y":
                     hangman.selectedRandomWord()
                     isSelectRandomWord = True
@@ -456,16 +468,16 @@ def main():
             print(COLOR_BONUS + str(hangman.getBonus()))
             print(Fore.LIGHTBLUE_EX + "Seçenekler", end="")
             print(": [H]arf tahmini | [K]elime tahmini | [İ]şlem çöz | [I]pucu | [Ç]ıkış")
-            choose = input("Seçiminiz: ").strip()
+            choice = input("Seçiminiz: ").strip()
 
             # Girilen harf küçük 'i' ise büyük 'I'ya dönüştürme sorununu gidermek için
-            if(choose == "i"):
-                choose = "İ"
+            if(choice == "i"):
+                choice = "İ"
             else:
-                choose = choose.upper()
+                choice = choice.upper()
 
             # Seçenekler
-            match choose:
+            match choice:
                 case "H":
                     letter = input("Harf: ").strip()
                     memberValidation(hangman.letterGuessing, letter)
